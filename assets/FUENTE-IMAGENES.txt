@@ -1,0 +1,3 @@
+Logo original: logo-sayuri.png
+Fotografías originales proporcionadas, organizadas en assets/galeria.
+El folleto se usó como referencia de contenido; no se publica como imagen.
