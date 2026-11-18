@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#76265f"><title>Trabajadores | Sayuri RRHH</title>
+<link rel="stylesheet" href="../css/styles.css"><link rel="stylesheet" href="../css/rrhh.css">
+<script src="../js/config.js" defer></script><script src="../js/api.js" defer></script><script src="../js/app.js" defer></script><script src="../js/import-workers.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="rrhh-body">
+<header class="rrhh-top"><a class="brand" href="../index.html"><img src="../assets/logo-sayuri.png" alt="Estética Spa Sayuri"><span><strong>Estética Spa</strong><em>Sayuri</em></span></a>
+<nav class="portal-nav"><a href="admin.html">Planificación</a><a class="active" href="import-workers.html">Trabajadores</a><button data-logout class="logout-btn">Salir</button></nav></header>
+<main class="portal-main narrow">
+<section class="page-heading"><div><p class="eyebrow">Gestión de personal</p><h1>Trabajadores</h1><p>Importa nuevos usuarios mediante una plantilla Excel y sincronízalos con la API.</p></div></section>
+<section class="card import-card">
+<div class="import-steps"><div><span>1</span><strong>Descarga la plantilla</strong><p>Completa una fila por trabajador.</p></div><div><span>2</span><strong>Selecciona el Excel</strong><p>Revisamos los datos antes de enviarlos.</p></div><div><span>3</span><strong>Importa</strong><p>La API crea o actualiza las cuentas.</p></div></div>
+<a class="button button-secondary" href="../templates/plantilla-trabajadores.xlsx" download>Descargar plantilla Excel</a>
+<div class="upload-box"><label for="worker-file">Archivo Excel (.xlsx / .xls)</label><input id="worker-file" type="file" accept=".xlsx,.xls"></div>
+<div id="preview" class="table-wrap"></div>
+<div class="import-actions"><button id="import-btn" class="button button-primary" disabled>Importar trabajadores</button><a href="admin.html" class="button button-secondary">Volver a planificación</a></div>
+<p id="import-message" class="form-message"></p>
+</section>
+<section class="card security-card"><h2>Seguridad de cuentas</h2><p>El archivo de importación puede contener contraseñas iniciales porque es un mecanismo de alta de cuentas. El backend debe recibirlas exclusivamente por HTTPS, transformarlas a un hash con salt y almacenarlas de forma irreversible. No deben guardarse en la hoja de cálculo como contraseña definitiva ni exponerse en el frontend.</p></section>
+</main>
+</body></html>
