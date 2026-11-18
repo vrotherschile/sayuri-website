@@ -1,12 +1,30 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const form=document.getElementById("login-form");
-  const msg=document.getElementById("login-message");
-  form.addEventListener("submit", async e => {
-    e.preventDefault(); msg.textContent="Validando acceso…";
+  const form = document.getElementById("login-form");
+  const msg = document.getElementById("login-message");
+  if (!form) return;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    msg.textContent = "Validando acceso…";
+    msg.className = "form-message";
+
+    const button = form.querySelector("button[type='submit']");
+    button.disabled = true;
+
     try {
-      const r=await SayuriAPI.login(form.username.value.trim(), form.password.value);
-      SayuriAPI.setSession(r);
-      location.href=r.user.role==="admin"?"admin.html":"worker.html";
-    } catch(err) { msg.textContent=err.message; }
+      const result = await SayuriAPI.login(
+        form.username.value.trim(),
+        form.password.value
+      );
+
+      SayuriAPI.setSession(result);
+
+      const role = String(result.user?.role || "").toUpperCase();
+      location.href = role === "ADMIN" ? "admin.html" : "worker.html";
+    } catch (error) {
+      msg.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
   });
 });

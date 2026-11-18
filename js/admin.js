@@ -1,102 +1,473 @@
 (() => {
-  const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const state = { year: Number(window.SAYURI_CONFIG.DEFAULT_YEAR), month: new Date().getMonth()===11 ? 11 : 10, workers: [], shifts: [], selectedWorkers: new Set() };
-  const $ = s => document.querySelector(s);
-  const pad = n => String(n).padStart(2,"0");
-  const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const monthNames = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+
+  const state = {
+    year: Number(window.SAYURI_CONFIG.DEFAULT_YEAR),
+    month: new Date().getMonth() === 11 ? 11 : 10,
+    workers: [],
+    shifts: [],
+    selectedWorkers: new Set()
+  };
+
+  const $ = (selector) => document.querySelector(selector);
+  const pad = (n) => String(n).padStart(2, "0");
+
+  function isoDate(date) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function normalizeShift(shift) {
+    return {
+      ...shift,
+      shiftId: shift.shiftId || shift.id,
+      shiftType: String(shift.shiftType || shift.type || "SINGLE").toUpperCase(),
+      startTime: shift.startTime || shift.start || "",
+      endTime: shift.endTime || shift.end || "",
+      description: shift.description || shift.position || "",
+      assignments: Array.isArray(shift.assignments) ? shift.assignments : []
+    };
+  }
+
+  function formatType(type) {
+    const value = String(type || "").toUpperCase();
+    if (value === "MORNING") return "Mañana";
+    if (value === "AFTERNOON") return "Tarde";
+    return "Único";
+  }
 
   function initYear() {
-    const select=$("#year-select");
-    for(let y=state.year-1;y<=state.year+2;y++){ const o=document.createElement("option");o.value=y;o.textContent=y;select.appendChild(o); }
-    select.value=state.year;
+    const select = $("#year-select");
+    select.innerHTML = "";
+
+    for (let year = state.year - 1; year <= state.year + 2; year++) {
+      const option = document.createElement("option");
+      option.value = year;
+      option.textContent = year;
+      select.appendChild(option);
+    }
+
+    select.value = state.year;
   }
+
   function changeMonth(delta) {
     state.month += delta;
     if (state.month < 10) state.month = 11;
     if (state.month > 11) state.month = 10;
     load();
   }
+
   async function load() {
-    $("#calendar").innerHTML='<div class="loading">Cargando planificación…</div>';
+    $("#calendar").innerHTML = '<div class="loading">Cargando planificación…</div>';
+
     try {
-      const [w,s]=await Promise.all([SayuriAPI.workers(), SayuriAPI.shifts(state.year)]);
-      state.workers=w.workers||[]; state.shifts=s.shifts||[];
-      $("#worker-count").textContent=state.workers.filter(x=>x.active!==false).length;
-      renderWorkers(); renderCalendar();
-    } catch(err) { $("#calendar").innerHTML=`<div class="empty-state">No se pudo cargar la información: ${err.message}</div>`; }
+      const [workersResult, shiftsResult] = await Promise.all([
+        SayuriAPI.workers(),
+        SayuriAPI.shifts()
+      ]);
+
+      state.workers = (workersResult.workers || []).filter((worker) => worker.active !== false);
+      state.shifts = (shiftsResult.shifts || []).map(normalizeShift);
+
+      $("#worker-count").textContent = state.workers.length;
+
+      renderWorkers();
+      renderCalendar();
+      renderAttendance();
+    } catch (error) {
+      $("#calendar").innerHTML =
+        `<div class="empty-state">No se pudo cargar la información: ${esc(error.message)}</div>`;
+    }
   }
-  function renderWorkers(){
-    const box=$("#workers-list"); box.innerHTML="";
-    if(!state.workers.length){box.innerHTML='<div class="empty-state">No hay trabajadores disponibles.</div>';return;}
-    state.workers.filter(w=>w.active!==false).forEach(w=>{
-      const el=document.createElement("article");el.className="worker-chip";
-      el.innerHTML=`<div class="avatar">${(w.name||w.username||"?").charAt(0).toUpperCase()}</div><div><strong>${esc(w.name||w.username)}</strong><small>${esc(w.role||"Sin cargo")} · ${esc(w.username||"")}</small></div>`;
-      box.appendChild(el);
+
+  function renderWorkers() {
+    const box = $("#workers-list");
+    box.innerHTML = "";
+
+    if (!state.workers.length) {
+      box.innerHTML = '<div class="empty-state">No hay trabajadores disponibles.</div>';
+      return;
+    }
+
+    state.workers.forEach((worker) => {
+      const fullName = [worker.name, worker.lastName].filter(Boolean).join(" ");
+      const element = document.createElement("article");
+      element.className = "worker-chip";
+      element.innerHTML = `
+        <div class="avatar">${esc((worker.name || worker.username || "?").charAt(0).toUpperCase())}</div>
+        <div>
+          <strong>${esc(fullName || worker.username)}</strong>
+          <small>${esc(worker.cargoDefault || "Sin cargo")} · ${esc(worker.username || "")}</small>
+        </div>
+      `;
+      box.appendChild(element);
     });
   }
-  function renderCalendar(){
-    $("#month-label").textContent=monthNames[state.month];
-    const cal=$("#calendar"); cal.innerHTML="";
-    const first=new Date(state.year,state.month,1), last=new Date(state.year,state.month+1,0);
-    const offset=(first.getDay()+6)%7;
-    ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(d=>{const h=document.createElement("div");h.className="calendar-day-name";h.textContent=d;cal.appendChild(h);});
-    for(let i=0;i<offset;i++) cal.appendChild(document.createElement("div"));
-    for(let day=1;day<=last.getDate();day++){
-      const date=`${state.year}-${pad(state.month+1)}-${pad(day)}`;
-      const cell=document.createElement("article");cell.className="calendar-cell";
-      const dayShifts=state.shifts.filter(s=>s.date===date);
-      cell.innerHTML=`<div class="day-top"><strong>${day}</strong><button class="mini-add" data-date="${date}" title="Crear turno">+</button></div>`;
-      if(dayShifts.length){
-        dayShifts.forEach(s=>{
-          const item=document.createElement("button");item.className=`shift-mini ${s.type}`;item.type="button";
-          item.innerHTML=`<span>${s.type==="morning"?"Mañana":s.type==="afternoon"?"Tarde":"Único"}</span><strong>${esc(s.start)}–${esc(s.end)}</strong><small>${esc(s.position||"Sin cargo")} · ${(s.workerIds||[]).length} pers.</small>`;
-          item.onclick=()=>openEdit(s);cell.appendChild(item);
-        });
-      } else cell.insertAdjacentHTML("beforeend",'<span class="empty-day">Sin turnos</span>');
-      cal.appendChild(cell);
+
+  function renderCalendar() {
+    $("#month-label").textContent = monthNames[state.month];
+
+    const calendar = $("#calendar");
+    calendar.innerHTML = "";
+
+    ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].forEach((day) => {
+      const header = document.createElement("div");
+      header.className = "calendar-day-name";
+      header.textContent = day;
+      calendar.appendChild(header);
+    });
+
+    const first = new Date(state.year, state.month, 1);
+    const last = new Date(state.year, state.month + 1, 0);
+    const offset = (first.getDay() + 6) % 7;
+
+    for (let i = 0; i < offset; i++) {
+      calendar.appendChild(document.createElement("div"));
     }
-    cal.querySelectorAll(".mini-add").forEach(b=>b.onclick=()=>openNew(b.dataset.date));
+
+    for (let day = 1; day <= last.getDate(); day++) {
+      const date = `${state.year}-${pad(state.month + 1)}-${pad(day)}`;
+      const cell = document.createElement("article");
+      cell.className = "calendar-cell";
+
+      const dayShifts = state.shifts.filter((shift) => shift.date === date);
+
+      cell.innerHTML = `
+        <div class="day-top">
+          <strong>${day}</strong>
+          <button class="mini-add" type="button" data-date="${date}" title="Crear turno">+</button>
+        </div>
+      `;
+
+      if (!dayShifts.length) {
+        cell.insertAdjacentHTML("beforeend", '<span class="empty-day">Sin turnos</span>');
+      } else {
+        dayShifts.forEach((shift) => {
+          const workerCount = shift.assignments.length;
+          const item = document.createElement("button");
+          item.className = `shift-mini ${String(shift.shiftType).toLowerCase()}`;
+          item.type = "button";
+          item.innerHTML = `
+            <span>${esc(formatType(shift.shiftType))}</span>
+            <strong>${esc(shift.startTime)}–${esc(shift.endTime)}</strong>
+            <small>${esc(shift.description || "Sin descripción")} · ${workerCount} pers.</small>
+          `;
+          item.addEventListener("click", () => openEdit(shift));
+          cell.appendChild(item);
+        });
+      }
+
+      calendar.appendChild(cell);
+    }
+
+    calendar.querySelectorAll(".mini-add").forEach((button) => {
+      button.addEventListener("click", () => openNew(button.dataset.date));
+    });
   }
-  function renderPicker(selected=[]){
-    state.selectedWorkers=new Set(selected);
-    const box=$("#worker-picker");box.innerHTML="";
-    state.workers.filter(w=>w.active!==false).forEach(w=>{
-      const label=document.createElement("label");label.className="picker-item";
-      label.innerHTML=`<input type="checkbox" value="${esc(w.id)}" ${state.selectedWorkers.has(w.id)?"checked":""}><span><strong>${esc(w.name||w.username)}</strong><small>${esc(w.role||"")}</small></span>`;
-      label.querySelector("input").onchange=e=>{e.target.checked?state.selectedWorkers.add(w.id):state.selectedWorkers.delete(w.id);$("#selected-count").textContent=state.selectedWorkers.size;};
+
+  function renderPicker(assignments = []) {
+    const selected = assignments.map((assignment) => assignment.workerId);
+    state.selectedWorkers = new Set(selected);
+
+    const box = $("#worker-picker");
+    box.innerHTML = "";
+
+    state.workers.forEach((worker) => {
+      const existing = assignments.find((assignment) => assignment.workerId === worker.workerId);
+      const label = document.createElement("label");
+      label.className = "picker-item";
+
+      label.innerHTML = `
+        <input type="checkbox" value="${esc(worker.workerId)}" ${state.selectedWorkers.has(worker.workerId) ? "checked" : ""}>
+        <span>
+          <strong>${esc([worker.name, worker.lastName].filter(Boolean).join(" ") || worker.username)}</strong>
+          <small>${esc(worker.cargoDefault || "Sin cargo")}</small>
+        </span>
+      `;
+
+      label.querySelector("input").addEventListener("change", (event) => {
+        if (event.target.checked) {
+          state.selectedWorkers.add(worker.workerId);
+        } else {
+          state.selectedWorkers.delete(worker.workerId);
+        }
+        $("#selected-count").textContent = state.selectedWorkers.size;
+      });
+
       box.appendChild(label);
     });
-    $("#selected-count").textContent=state.selectedWorkers.size;
-  }
-  function openNew(date=iso(new Date())) {
-    $("#shift-title").textContent="Crear turno"; $("#shift-form").dataset.id="";
-    $("#shift-date").value=date; $("#shift-type").value="morning"; $("#shift-start").value="09:00"; $("#shift-end").value="13:00"; $("#shift-position").value="";
-    $("#shift-message").textContent=""; renderPicker([]); $("#shift-modal").hidden=false;
-  }
-  function openEdit(s){
-    $("#shift-title").textContent="Editar turno"; $("#shift-form").dataset.id=s.id;
-    $("#shift-date").value=s.date; $("#shift-type").value=s.type; $("#shift-start").value=s.start; $("#shift-end").value=s.end; $("#shift-position").value=s.position||"";
-    $("#shift-message").textContent=""; renderPicker(s.workerIds||[]); $("#shift-modal").hidden=false;
-  }
-  function close(){ $("#shift-modal").hidden=true; }
-  async function save(e){
-    e.preventDefault();const msg=$("#shift-message");msg.textContent="Guardando…";
-    const data={id:e.target.dataset.id||"",date:$("#shift-date").value,type:$("#shift-type").value,start:$("#shift-start").value,end:$("#shift-end").value,position:$("#shift-position").value.trim(),workerIds:[...state.selectedWorkers]};
-    if(data.start>=data.end){msg.textContent="El horario de término debe ser posterior al inicio.";return;}
-    if(!data.workerIds.length){msg.textContent="Selecciona al menos un trabajador para formar el equipo.";return;}
-    try{
-      if(data.id) await SayuriAPI.updateShift(data); else await SayuriAPI.createShift(data);
-      msg.textContent="Turno guardado correctamente."; await load(); setTimeout(close,500);
-    }catch(err){msg.textContent=err.message;}
-  }
-  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 
-  document.addEventListener("DOMContentLoaded",()=>{
-    initYear(); load();
-    $("#prev-month").onclick=()=>changeMonth(-1);
-    $("#next-month").onclick=()=>changeMonth(1);
-    $("#year-select").onchange=e=>{state.year=Number(e.target.value);load();};
-    $("#new-shift").onclick=()=>openNew(); $("#close-modal").onclick=close; $("#cancel-shift").onclick=close; $("#shift-form").onsubmit=save;
-    $("#shift-type").onchange=e=>{if(e.target.value==="single"){/* único sigue siendo un solo turno */}};
+    $("#selected-count").textContent = state.selectedWorkers.size;
+    renderCurrentAssignments(assignments);
+  }
+
+  function renderCurrentAssignments(assignments = []) {
+    const box = $("#current-assignments");
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    if (!assignments.length) {
+      box.innerHTML = '<div class="empty-state compact">Aún no hay trabajadores asignados.</div>';
+      return;
+    }
+
+    assignments.forEach((assignment) => {
+      const row = document.createElement("div");
+      row.className = "assignment-row";
+      row.innerHTML = `
+        <div>
+          <strong>${esc(assignment.workerName || assignment.workerId)}</strong>
+          <small>${esc(assignment.cargo || "Cargo no definido")}</small>
+        </div>
+        <button type="button" class="remove-assignment" data-id="${esc(assignment.assignmentId)}">Quitar</button>
+      `;
+
+      row.querySelector(".remove-assignment").addEventListener("click", async () => {
+        if (!confirm("¿Quitar a este trabajador del turno?")) return;
+
+        try {
+          await SayuriAPI.removeAssignment(assignment.assignmentId);
+          await load();
+          const refreshed = state.shifts.find((shift) => shift.shiftId === $("#shift-form").dataset.id);
+          if (refreshed) {
+            renderPicker(refreshed.assignments);
+          }
+        } catch (error) {
+          $("#shift-message").textContent = error.message;
+        }
+      });
+
+      box.appendChild(row);
+    });
+  }
+
+  function openNew(date = isoDate(new Date())) {
+    $("#shift-title").textContent = "Crear turno";
+    $("#shift-form").dataset.id = "";
+    $("#shift-date").value = date;
+    $("#shift-type").value = "MORNING";
+    $("#shift-start").value = "09:00";
+    $("#shift-end").value = "13:00";
+    $("#shift-description").value = "";
+    $("#shift-message").textContent = "";
+    $("#delete-shift").hidden = true;
+    renderPicker([]);
+    $("#shift-modal").hidden = false;
+  }
+
+  function openEdit(shift) {
+    $("#shift-title").textContent = "Editar turno";
+    $("#shift-form").dataset.id = shift.shiftId;
+    $("#shift-date").value = shift.date;
+    $("#shift-type").value = shift.shiftType;
+    $("#shift-start").value = shift.startTime;
+    $("#shift-end").value = shift.endTime;
+    $("#shift-description").value = shift.description || "";
+    $("#shift-message").textContent = "";
+    $("#delete-shift").hidden = false;
+    renderPicker(shift.assignments || []);
+    $("#shift-modal").hidden = false;
+  }
+
+  function closeModal() {
+    $("#shift-modal").hidden = true;
+  }
+
+  async function save(event) {
+    event.preventDefault();
+
+    const message = $("#shift-message");
+    message.textContent = "Guardando…";
+
+    const shiftId = event.target.dataset.id || "";
+    const data = {
+      shiftId,
+      date: $("#shift-date").value,
+      shiftType: $("#shift-type").value,
+      startTime: $("#shift-start").value,
+      endTime: $("#shift-end").value,
+      description: $("#shift-description").value.trim()
+    };
+
+    if (!data.date || !data.startTime || !data.endTime) {
+      message.textContent = "Completa fecha, hora de inicio y hora de término.";
+      return;
+    }
+
+    if (data.startTime >= data.endTime) {
+      message.textContent = "El horario de término debe ser posterior al inicio.";
+      return;
+    }
+
+    if (!state.selectedWorkers.size) {
+      message.textContent = "Selecciona al menos un trabajador para formar el equipo.";
+      return;
+    }
+
+    try {
+      let savedShiftId = shiftId;
+
+      if (shiftId) {
+        await SayuriAPI.updateShift(data);
+
+        const current = state.shifts.find((shift) => shift.shiftId === shiftId);
+        const previousAssignments = current?.assignments || [];
+
+        const selectedIds = [...state.selectedWorkers];
+        const previousIds = previousAssignments.map((assignment) => assignment.workerId);
+
+        for (const assignment of previousAssignments) {
+          if (!state.selectedWorkers.has(assignment.workerId)) {
+            await SayuriAPI.removeAssignment(assignment.assignmentId);
+          }
+        }
+
+        const newWorkers = selectedIds
+          .filter((workerId) => !previousIds.includes(workerId))
+          .map((workerId) => ({ workerId, cargo: data.description }));
+
+        if (newWorkers.length) {
+          await SayuriAPI.assignWorkers(savedShiftId, newWorkers);
+        }
+
+        for (const assignment of previousAssignments) {
+          if (state.selectedWorkers.has(assignment.workerId)) {
+            await SayuriAPI.updateAssignment(assignment.assignmentId, {
+              cargo: data.description
+            });
+          }
+        }
+      } else {
+        const result = await SayuriAPI.createShift(data);
+        savedShiftId = result.shift.shiftId;
+        await SayuriAPI.assignWorkers(
+          savedShiftId,
+          [...state.selectedWorkers].map((workerId) => ({
+            workerId,
+            cargo: data.description
+          }))
+        );
+      }
+
+      message.textContent = "Turno y equipo guardados correctamente.";
+      await load();
+
+      setTimeout(() => {
+        closeModal();
+      }, 500);
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  }
+
+  async function deleteCurrentShift() {
+    const shiftId = $("#shift-form").dataset.id;
+    if (!shiftId) return;
+
+    if (!confirm("¿Desactivar este turno? Las asignaciones existentes quedarán asociadas al registro histórico.")) {
+      return;
+    }
+
+    $("#shift-message").textContent = "Desactivando turno…";
+
+    try {
+      await SayuriAPI.deleteShift(shiftId);
+      closeModal();
+      await load();
+    } catch (error) {
+      $("#shift-message").textContent = error.message;
+    }
+  }
+
+  async function renderAttendance() {
+    const box = $("#attendance-table");
+    if (!box) return;
+
+    try {
+      const result = await SayuriAPI.adminAttendance();
+      const records = result.attendance || [];
+
+      if (!records.length) {
+        box.innerHTML = '<div class="empty-state">Todavía no existen registros de asistencia.</div>';
+        return;
+      }
+
+      const rows = records
+        .sort((a, b) => String(b.signedAt).localeCompare(String(a.signedAt)))
+        .map((record) => {
+          const signedAt = record.signedAt
+            ? new Date(record.signedAt).toLocaleString("es-CL", {
+                dateStyle: "short",
+                timeStyle: "short"
+              })
+            : "—";
+
+          return `
+            <tr>
+              <td>${esc(record.workerName || "—")}</td>
+              <td>${esc(record.date || "—")}</td>
+              <td>${esc(formatType(record.shiftType))}</td>
+              <td>${esc(record.startTime || "—")}–${esc(record.endTime || "—")}</td>
+              <td>${esc(record.cargo || "—")}</td>
+              <td><strong class="attendance-signed">Firmado</strong></td>
+              <td>${esc(signedAt)}</td>
+            </tr>
+          `;
+        })
+        .join("");
+
+      box.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Fecha</th>
+                <th>Turno</th>
+                <th>Horario</th>
+                <th>Cargo</th>
+                <th>Estado</th>
+                <th>Firma</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    } catch (error) {
+      box.innerHTML = `<div class="empty-state">${esc(error.message)}</div>`;
+    }
+  }
+
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initYear();
+    load();
+
+    $("#prev-month").addEventListener("click", () => changeMonth(-1));
+    $("#next-month").addEventListener("click", () => changeMonth(1));
+    $("#year-select").addEventListener("change", (event) => {
+      state.year = Number(event.target.value);
+      load();
+    });
+
+    $("#new-shift").addEventListener("click", () => openNew());
+    $("#close-modal").addEventListener("click", closeModal);
+    $("#cancel-shift").addEventListener("click", closeModal);
+    $("#shift-form").addEventListener("submit", save);
+    $("#delete-shift").addEventListener("click", deleteCurrentShift);
+    $("#refresh-attendance").addEventListener("click", renderAttendance);
   });
 })();

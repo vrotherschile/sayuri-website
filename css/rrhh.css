@@ -18,3 +18,18 @@
 .worker-welcome{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin-bottom:1.25rem}.live-clock{font-family:var(--serif);font-size:1.8rem;color:var(--plum)}.attendance-live{display:flex;justify-content:space-between;align-items:center;gap:2rem;background:linear-gradient(135deg,#76265f,#a74486);color:#fff;border:0}.attendance-live .eyebrow,.attendance-live p{color:#f9dff1}.attendance-live h2{color:#fff}.live-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#8ee6b2;box-shadow:0 0 0 7px rgba(142,230,178,.13)}.attendance-action{text-align:center;min-width:250px}.sign-button{border:0;border-radius:999px;min-height:58px;padding:.9rem 1.5rem;background:#fff;color:var(--plum);font-weight:900;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.15)}.sign-button:disabled{opacity:.45;cursor:not-allowed}.sign-status{display:block;color:#f9dff1;font-size:.72rem;margin-top:.5rem}.worker-schedule{display:grid;gap:.65rem;margin-top:1rem}.schedule-item{display:grid;grid-template-columns:220px 1fr auto;align-items:center;gap:1rem;padding:1rem;border:1px solid var(--line);border-radius:15px;background:#fff}.schedule-date strong,.schedule-date small{display:block}.schedule-date strong{text-transform:capitalize;font-size:.85rem}.schedule-date small{color:var(--berry);font-weight:800;font-size:.7rem}.schedule-item h3{margin:0;font-size:.95rem}.schedule-item p{margin:.15rem 0 0;font-size:.76rem}.schedule-status{padding:.35rem .7rem;border-radius:999px;background:#f7e8f1;color:var(--plum);font-size:.68rem;font-weight:800}.schedule-status.signed{background:#e8f6ef;color:#26704c}.profile-card dl{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:1rem 0 0}.profile-card dt{font-size:.7rem;color:var(--muted)}.profile-card dd{margin:.15rem 0 0;font-weight:800;font-size:.85rem}
 @media (max-width:900px){.portal-nav{gap:.7rem}.page-heading{align-items:start;flex-direction:column}.toolbar{align-items:start;flex-direction:column}.calendar{min-width:780px}.attendance-live,.worker-welcome{flex-direction:column;align-items:flex-start}.attendance-action{width:100%;min-width:0}.sign-button{width:100%}.schedule-item{grid-template-columns:1fr}.profile-card dl{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:680px){.rrhh-top{padding:0 1rem}.rrhh-top .brand span{display:none}.portal-nav a:not(.active){display:none}.portal-main,.portal-main.narrow{width:min(100% - 24px,1000px)}.form-grid,.worker-picker,.import-steps{grid-template-columns:1fr}.full-field{grid-column:auto}.calendar{min-width:700px}.calendar-card{padding:.8rem}.modal{padding:1.2rem}.profile-card dl{grid-template-columns:1fr}.admin-user{width:100%}}
+
+.current-assignments-box{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line)}
+.current-assignments-box h3{margin-bottom:.65rem}
+.assignment-row{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.7rem .8rem;border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:.45rem}
+.assignment-row strong,.assignment-row small{display:block}
+.assignment-row strong{font-size:.78rem}
+.assignment-row small{font-size:.68rem;color:var(--muted);margin-top:.15rem}
+.remove-assignment{border:0;background:#fbeaf3;color:#9d315f;border-radius:999px;padding:.4rem .65rem;font-size:.68rem;font-weight:800;cursor:pointer}
+.empty-state.compact{padding:.8rem;font-size:.72rem}
+.button-danger{border:1px solid #e7b4c8;background:#fff2f7;color:#9d315f}
+.button-danger:hover{background:#fbe3ee}
+.attendance-admin-card .table-wrap{margin-top:1rem}
+.attendance-admin-card table{min-width:850px}
+.attendance-signed{color:#26704c;font-size:.72rem}
+.schedule-note{display:block;color:var(--muted);font-size:.68rem;margin-top:.25rem}

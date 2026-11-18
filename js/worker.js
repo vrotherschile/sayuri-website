@@ -1,44 +1,201 @@
 (() => {
-  let schedule=[]; let activeShift=null;
-  const $=s=>document.querySelector(s);
-  const pad=n=>String(n).padStart(2,"0");
-  const toMinutes=t=>{const [h,m]=t.split(":").map(Number);return h*60+m;};
-  const nowMinutes=()=>{const d=new Date();return d.getHours()*60+d.getMinutes();};
-  function formatDate(s){const [y,m,d]=s.split("-");return new Date(Number(y),Number(m)-1,Number(d)).toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});}
-  function tick(){const d=new Date();$("#clock").textContent=d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); updateAttendanceWindow();}
-  function withinWindow(shift){
-    const today=new Date(); const date=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-    if(shift.date!==date)return false;
-    const diff=nowMinutes()-toMinutes(shift.start);
-    return diff>=-window.SAYURI_CONFIG.ATTENDANCE_WINDOW_MINUTES && diff<=window.SAYURI_CONFIG.ATTENDANCE_WINDOW_MINUTES;
+  let schedule = [];
+  let activeShift = null;
+
+  const $ = (selector) => document.querySelector(selector);
+  const pad = (n) => String(n).padStart(2, "0");
+
+  function formatDate(dateString) {
+    const [year, month, day] = String(dateString).split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("es-CL", {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
   }
-  async function updateAttendanceWindow(){
-    activeShift=schedule.find(s=>withinWindow(s)&&!s.attendanceSigned);
-    const btn=$("#sign-btn"),help=$("#attendance-help");
-    if(!activeShift){btn.disabled=true;help.textContent="No hay un turno dentro de la ventana de firma en este momento.";return;}
-    btn.disabled=false;help.textContent=`${activeShift.label||"Turno"} · ${activeShift.start}–${activeShift.end} · ${activeShift.position||"Cargo por definir"}`;
-    try{const r=await SayuriAPI.attendanceStatus(activeShift.id); if(r.attendance?.signedAt){activeShift.attendanceSigned=true;btn.disabled=true;$("#sign-status").textContent=`Firmado a las ${new Date(r.attendance.signedAt).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}`;}}
-    catch(err){$("#sign-status").textContent="No se pudo comprobar el estado de asistencia.";}
+
+  function formatShiftType(type) {
+    const value = String(type || "").toUpperCase();
+    if (value === "MORNING") return "Mañana";
+    if (value === "AFTERNOON") return "Tarde";
+    return "Turno único";
   }
-  function render(){
-    $("#schedule-count").textContent=schedule.length;const box=$("#worker-schedule");box.innerHTML="";
-    if(!schedule.length){box.innerHTML='<div class="empty-state">No tienes turnos asignados.</div>';return;}
-    schedule.sort((a,b)=>`${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`)).forEach(s=>{
-      const card=document.createElement("article");card.className="schedule-item";
-      card.innerHTML=`<div class="schedule-date"><strong>${formatDate(s.date)}</strong><small>${s.type==="morning"?"Mañana":s.type==="afternoon"?"Tarde":"Turno único"}</small></div><div><h3>${esc(s.position||"Cargo no definido")}</h3><p>${esc(s.start)}–${esc(s.end)} · ${esc(s.location||"Lugar por confirmar")}</p></div><span class="schedule-status ${s.attendanceSigned?"signed":""}">${s.attendanceSigned?"Asistencia firmada":"Programado"}</span>`;
+
+  function toDateTime(date, time) {
+    const [y, m, d] = String(date).split("-").map(Number);
+    const [h, min] = String(time).split(":").map(Number);
+    return new Date(y, m - 1, d, h, min, 0, 0);
+  }
+
+  function withinWindow(shift) {
+    const now = new Date();
+    const start = toDateTime(shift.date, shift.startTime);
+    const diff = (now.getTime() - start.getTime()) / 60000;
+    const limit = Number(window.SAYURI_CONFIG.ATTENDANCE_WINDOW_MINUTES || 60);
+
+    return diff >= -limit && diff <= limit;
+  }
+
+  async function refreshActiveShift() {
+    activeShift = null;
+
+    const candidates = schedule.filter((shift) => withinWindow(shift));
+    for (const shift of candidates) {
+      try {
+        const status = await SayuriAPI.attendanceStatus(shift.assignmentId);
+        if (!status.signed) {
+          activeShift = shift;
+          break;
+        }
+        shift.attendanceSigned = true;
+      } catch (_) {
+        // El estado se volverá a consultar cuando el usuario intente firmar.
+      }
+    }
+
+    const button = $("#sign-btn");
+    const help = $("#attendance-help");
+    const status = $("#sign-status");
+
+    if (!activeShift) {
+      button.disabled = true;
+      help.textContent = "No hay un turno dentro de la ventana de firma en este momento.";
+      return;
+    }
+
+    button.disabled = false;
+    help.textContent =
+      `${formatShiftType(activeShift.shiftType)} · ${activeShift.startTime}–${activeShift.endTime} · ${activeShift.cargo || "Cargo por definir"}`;
+
+    if (status && !activeShift.attendanceSigned) {
+      status.textContent = "";
+    }
+  }
+
+  function tick() {
+    const now = new Date();
+    $("#clock").textContent = now.toLocaleTimeString("es-CL", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+    refreshActiveShift();
+  }
+
+  function renderProfile(worker) {
+    const user = SayuriAPI.getSession()?.user || {};
+    const name =
+      [worker?.name, worker?.lastName].filter(Boolean).join(" ") ||
+      [user.name, user.lastName].filter(Boolean).join(" ") ||
+      user.username ||
+      "—";
+
+    document.querySelectorAll("[data-user-name]").forEach((element) => {
+      element.textContent = name;
+    });
+
+    $("#profile-data").innerHTML = `
+      <div><dt>Nombre</dt><dd>${esc(name)}</dd></div>
+      <div><dt>Usuario</dt><dd>${esc(user.username || "—")}</dd></div>
+      <div><dt>Cargo base</dt><dd>${esc(worker?.cargoDefault || "—")}</dd></div>
+      <div><dt>RUT</dt><dd>${esc(worker?.rut || "—")}</dd></div>
+      <div><dt>Teléfono</dt><dd>${esc(worker?.phone || "—")}</dd></div>
+      <div><dt>Correo</dt><dd>${esc(worker?.email || "—")}</dd></div>
+    `;
+  }
+
+  function renderSchedule() {
+    $("#schedule-count").textContent = schedule.length;
+    const box = $("#worker-schedule");
+    box.innerHTML = "";
+
+    if (!schedule.length) {
+      box.innerHTML = '<div class="empty-state">No tienes turnos asignados.</div>';
+      return;
+    }
+
+    schedule.forEach((shift) => {
+      const card = document.createElement("article");
+      card.className = "schedule-item";
+
+      const signed = Boolean(shift.attendanceSigned);
+
+      card.innerHTML = `
+        <div class="schedule-date">
+          <strong>${esc(formatDate(shift.date))}</strong>
+          <small>${esc(formatShiftType(shift.shiftType))}</small>
+        </div>
+        <div>
+          <h3>${esc(shift.cargo || "Cargo no definido")}</h3>
+          <p>${esc(shift.startTime)}–${esc(shift.endTime)}${shift.description ? ` · ${esc(shift.description)}` : ""}</p>
+          ${shift.notes ? `<small class="schedule-note">${esc(shift.notes)}</small>` : ""}
+        </div>
+        <span class="schedule-status ${signed ? "signed" : ""}">
+          ${signed ? "Asistencia firmada" : "Programado"}
+        </span>
+      `;
+
       box.appendChild(card);
     });
-    const u=SayuriApp.session?.user||{};$("#profile-data").innerHTML=`<div><dt>Nombre</dt><dd>${esc(u.name||"—")}</dd></div><div><dt>Usuario</dt><dd>${esc(u.username||"—")}</dd></div><div><dt>Cargo base</dt><dd>${esc(u.roleTitle||u.role||"—")}</dd></div><div><dt>ID trabajador</dt><dd>${esc(u.id||"—")}</dd></div>`;
   }
-  async function load(){
-    try{const r=await SayuriAPI.workerSchedule();schedule=r.schedule||[];render();updateAttendanceWindow();}
-    catch(err){$("#worker-schedule").innerHTML=`<div class="empty-state">${esc(err.message)}</div>`;}
+
+  async function load() {
+    try {
+      const result = await SayuriAPI.workerSchedule();
+      schedule = (result.schedule || []).map((item) => ({
+        ...item,
+        attendanceSigned: false
+      }));
+
+      renderProfile(result.worker || {});
+      renderSchedule();
+      await refreshActiveShift();
+    } catch (error) {
+      $("#worker-schedule").innerHTML =
+        `<div class="empty-state">${esc(error.message)}</div>`;
+    }
   }
-  $("#sign-btn").addEventListener("click",async()=>{
-    if(!activeShift)return;const btn=$("#sign-btn"),status=$("#sign-status");btn.disabled=true;status.textContent="Registrando asistencia…";
-    try{const r=await SayuriAPI.signAttendance(activeShift.id);activeShift.attendanceSigned=true;status.textContent=`Asistencia registrada a las ${new Date(r.signedAt||Date.now()).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}`;render();}
-    catch(err){status.textContent=err.message;btn.disabled=false;}
+
+  async function signCurrentAttendance() {
+    if (!activeShift) return;
+
+    const button = $("#sign-btn");
+    const status = $("#sign-status");
+
+    button.disabled = true;
+    status.textContent = "Registrando asistencia…";
+
+    try {
+      const result = await SayuriAPI.signAttendance(activeShift.assignmentId);
+      activeShift.attendanceSigned = true;
+      status.textContent =
+        `Asistencia registrada a las ${new Date(result.serverTime || Date.now()).toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit"
+        })}`;
+      renderSchedule();
+      await refreshActiveShift();
+    } catch (error) {
+      status.textContent = error.message;
+      await refreshActiveShift();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    $("#sign-btn").addEventListener("click", signCurrentAttendance);
+    load();
+    tick();
+    setInterval(tick, 15000);
   });
-  document.addEventListener("DOMContentLoaded",()=>{load();tick();setInterval(tick,1000);});
-  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+  }
 })();

@@ -1,24 +1,111 @@
 (() => {
-  let rows=[];
-  const $=s=>document.querySelector(s);
-  function normalize(row){return {username:String(row.username||row.Usuario||"").trim(),password:String(row.password||row.Contraseña||"").trim(),name:String(row.name||row.Nombre||"").trim(),roleTitle:String(row.roleTitle||row.Cargo||"").trim(),phone:String(row.phone||row.Telefono||"").trim(),email:String(row.email||row.Email||"").trim(),active:row.active===false?false:true};}
-  function render(){
-    const box=$("#preview"); if(!rows.length){box.innerHTML="";$("#import-btn").disabled=true;return;}
-    const cols=["username","name","roleTitle","phone","email","password"];box.innerHTML=`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${esc(c==="password"?"••••••":r[c]||"")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-    $("#import-btn").disabled=rows.some(r=>!r.username||!r.password||!r.name);
+  let rows = [];
+
+  const $ = (selector) => document.querySelector(selector);
+
+  function normalize(row) {
+    return {
+      username: String(row.username || row.Usuario || "").trim(),
+      password: String(row.password || row.Contraseña || "").trim(),
+      name: String(row.name || row.Nombre || "").trim(),
+      lastName: String(row.lastName || row.Apellido || "").trim(),
+      rut: String(row.rut || row.RUT || "").trim(),
+      email: String(row.email || row.Email || "").trim(),
+      phone: String(row.phone || row.Telefono || "").trim(),
+      cargo: String(row.cargo || row.Cargo || row.roleTitle || "").trim()
+    };
   }
-  $("#worker-file").addEventListener("change",async e=>{
-    const file=e.target.files[0];if(!file)return;$("#import-message").textContent="Leyendo archivo…";
-    try{
-      if(!window.XLSX)throw new Error("No se cargó el lector Excel. Revisa tu conexión.");
-      const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];
-      rows=XLSX.utils.sheet_to_json(ws,{defval:""}).map(normalize);render();$("#import-message").textContent=`${rows.length} registros listos para importar.`;
-    }catch(err){rows=[];render();$("#import-message").textContent=err.message;}
+
+  function render() {
+    const box = $("#preview");
+
+    if (!rows.length) {
+      box.innerHTML = "";
+      $("#import-btn").disabled = true;
+      return;
+    }
+
+    const columns = ["username", "name", "lastName", "rut", "cargo", "phone", "email", "password"];
+
+    box.innerHTML = `
+      <table>
+        <thead>
+          <tr>${columns.map((column) => `<th>${esc(column)}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              ${columns.map((column) => `
+                <td>${esc(column === "password" ? "••••••" : row[column] || "")}</td>
+              `).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+
+    $("#import-btn").disabled = rows.some(
+      (row) => !row.username || !row.password || !row.name
+    );
+  }
+
+  $("#worker-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    $("#import-message").textContent = "Leyendo archivo…";
+
+    try {
+      if (!window.XLSX) {
+        throw new Error("No se cargó el lector Excel. Revisa tu conexión.");
+      }
+
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      rows = XLSX.utils
+        .sheet_to_json(sheet, { defval: "" })
+        .map(normalize);
+
+      render();
+      $("#import-message").textContent =
+        `${rows.length} registros listos para importar.`;
+    } catch (error) {
+      rows = [];
+      render();
+      $("#import-message").textContent = error.message;
+    }
   });
-  $("#import-btn").addEventListener("click",async()=>{
-    const msg=$("#import-message");msg.textContent="Enviando trabajadores a la API…";$("#import-btn").disabled=true;
-    try{const r=await SayuriAPI.importWorkers(rows);msg.textContent=`Importación completada. ${r.imported??rows.length} trabajadores procesados.`;rows=[];render();}
-    catch(err){msg.textContent=err.message;$("#import-btn").disabled=false;}
+
+  $("#import-btn").addEventListener("click", async () => {
+    const message = $("#import-message");
+    message.textContent = "Enviando trabajadores a la API…";
+    $("#import-btn").disabled = true;
+
+    try {
+      const result = await SayuriAPI.importWorkers(rows);
+      const created = result.created?.length || 0;
+      const errors = result.errors?.length || 0;
+
+      message.textContent =
+        `Importación completada: ${created} creados${errors ? ` y ${errors} con error` : ""}.`;
+
+      rows = [];
+      render();
+    } catch (error) {
+      message.textContent = error.message;
+      $("#import-btn").disabled = false;
+    }
   });
-  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+  }
 })();

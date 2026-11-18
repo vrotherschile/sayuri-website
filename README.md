@@ -1,43 +1,49 @@
 # Estética Spa Sayuri — Sitio + Portal RRHH
 
-Proyecto responsive para Estética Spa Sayuri, con el sitio público y un portal de gestión de trabajadores.
+Proyecto responsive para Estética Spa Sayuri, con el sitio público y un portal de gestión de trabajadores conectado a Google Apps Script + Google Sheets.
 
 ## Estructura
 
 - `index.html` — sitio público.
 - `pages/login.html` — acceso de usuarios.
-- `pages/admin.html` — planificación de turnos y equipos.
+- `pages/admin.html` — planificación, equipos y control de asistencia.
 - `pages/worker.html` — calendario personal y firma de asistencia.
 - `pages/import-workers.html` — importación de trabajadores mediante Excel.
-- `js/config.js` — configuración de la API.
-- `js/api.js` — capa de comunicación con Google Apps Script.
-- `js/admin.js` — lógica de planificación.
-- `js/worker.js` — lógica del trabajador y firma.
+- `js/config.js` — URL de la API.
+- `js/api.js` — comunicación con Google Apps Script.
+- `js/app.js` — control de sesión y permisos de frontend.
+- `js/admin.js` — planificación y asistencia administrativa.
+- `js/worker.js` — calendario personal y firma.
 - `js/import-workers.js` — lectura/importación Excel.
-- `backend/Code.gs` — backend inicial para Google Apps Script.
-- `templates/plantilla-trabajadores.xlsx` — plantilla Excel.
+- `backend/Code.gs` — backend Google Apps Script.
+- `templates/plantilla-trabajadores.xlsx` — plantilla de importación.
 
-## Funcionalidades previstas
+## Funcionalidades
 
 ### Administrador
-- Carga de trabajadores desde la API.
-- Calendario de noviembre y diciembre y posibilidad de navegar otros meses.
+
+- Lista de trabajadores desde Google Sheets.
+- Calendario de noviembre y diciembre.
 - Turnos independientes de mañana y tarde.
 - Turno único.
 - Fecha, hora de inicio, hora de término y cargo.
-- Selección de trabajadores para formar equipos por turno.
-- Edición de turnos.
-- Importación masiva de trabajadores mediante Excel.
+- Selección de trabajadores para formar equipos.
+- Edición y desactivación de turnos.
+- Cambio de integrantes de un equipo.
+- Importación masiva mediante Excel.
+- Consulta de firmas de asistencia.
 
 ### Trabajador
-- Perfil y datos básicos.
-- Calendario de turnos asignados.
-- Fecha, tipo de turno, horario y cargo.
-- Botón de firma de asistencia.
-- Ventana de firma: desde 60 minutos antes hasta 60 minutos después del inicio.
+
+- Inicio de sesión.
+- Visualización de sus datos.
+- Visualización de todos sus turnos asignados.
+- Fecha, tipo, horario y cargo.
+- Firma electrónica de asistencia.
+- Validación de la ventana de firma en el backend.
 - Prevención de doble firma.
 
-## Configuración API
+## Configuración
 
 Edita `js/config.js`:
 
@@ -50,18 +56,46 @@ window.SAYURI_CONFIG = {
 };
 ```
 
-Durante desarrollo puedes usar `API_MODE: "demo"` para visualizar la interfaz sin backend. No usar ese modo en producción.
+En el ZIP actual ya existe una URL `/exec` configurada. Si esa implementación cambia, reemplázala por la nueva.
+
+## Backend
+
+1. Abre la carpeta `backend`.
+2. Copia `Code.gs` a Google Apps Script.
+3. Ejecuta `iniciarSistemaSayuri()`.
+4. Implementa como aplicación web.
+5. Copia la URL `/exec` a `js/config.js`.
+6. Publica el sitio.
+
+## Separación de sistemas
+
+Sayuri RRHH es independiente de VFeria:
+
+```text
+Sayuri Web → Apps Script Sayuri → Sheet Sayuri RRHH
+
+VFeria Web → Apps Script VFeria → Sheet VFeria
+```
+
+No se comparten hojas, usuarios, sesiones ni endpoints.
 
 ## Excel
 
-La plantilla contiene:
+La plantilla utiliza:
 
-`username, password, name, roleTitle, phone, email, active`
+```text
+username, password, name, lastName, rut, email, phone, cargo
+```
 
-El archivo Excel se procesa en el navegador y luego se envía a la API. El backend debe transformar la contraseña inicial a un hash y no conservarla en texto plano.
+El backend nunca debe guardar la contraseña definitiva en texto plano.
 
-## Próximo paso
+## Firma de asistencia
 
-Configurar la Google Sheet, desplegar `backend/Code.gs` como Web App, colocar la URL `/exec` en `js/config.js` y probar login, trabajadores, planificación, asignación y asistencia.
+La regla está implementada en el backend:
 
-Para producción conviene añadir auditoría, recuperación de contraseña, gestión de sesiones, permisos de administrador y políticas de retención de datos.
+- 60 minutos antes del inicio;
+- hasta 60 minutos después del inicio;
+- una sola firma por asignación;
+- hora validada con el servidor.
+
+La interfaz puede deshabilitar el botón fuera de la ventana, pero la seguridad real se mantiene en Apps Script.
