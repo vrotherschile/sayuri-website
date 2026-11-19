@@ -98,7 +98,6 @@
     $("#profile-data").innerHTML = `
       <div><dt>Nombre</dt><dd>${esc(name)}</dd></div>
       <div><dt>Usuario</dt><dd>${esc(user.username || "—")}</dd></div>
-      <div><dt>Cargo base</dt><dd>${esc(worker?.cargoDefault || "—")}</dd></div>
       <div><dt>RUT</dt><dd>${esc(worker?.rut || "—")}</dd></div>
       <div><dt>Teléfono</dt><dd>${esc(worker?.phone || "—")}</dd></div>
       <div><dt>Correo</dt><dd>${esc(worker?.email || "—")}</dd></div>
@@ -127,7 +126,7 @@
           <small>${esc(formatShiftType(shift.shiftType))}</small>
         </div>
         <div>
-          <h3>${esc(shift.cargo || "Cargo no definido")}</h3>
+          <h3>${esc(shift.cargo || "Función no definida")}</h3>
           <p>${esc(shift.startTime)}–${esc(shift.endTime)}${shift.description ? ` · ${esc(shift.description)}` : ""}</p>
           ${shift.notes ? `<small class="schedule-note">${esc(shift.notes)}</small>` : ""}
         </div>

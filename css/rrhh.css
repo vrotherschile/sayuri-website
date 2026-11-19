@@ -33,3 +33,31 @@
 .attendance-admin-card table{min-width:850px}
 .attendance-signed{color:#26704c;font-size:.72rem}
 .schedule-note{display:block;color:var(--muted);font-size:.68rem;margin-top:.25rem}
+
+.payroll-card{overflow:hidden}
+.payroll-filters{display:flex;align-items:end;gap:.55rem;flex-wrap:wrap}
+.payroll-filters label{font-size:.68rem;margin:0}
+.payroll-filters select{min-height:42px;width:auto;min-width:110px}
+.payroll-rules{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin:1rem 0}
+.payroll-rules>div{padding:.75rem .9rem;border:1px solid var(--line);border-radius:13px;background:#fffafd}
+.payroll-rules strong,.payroll-rules span{display:block}
+.payroll-rules strong{font-size:.76rem;color:var(--plum)}
+.payroll-rules span{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+.payroll-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin:1rem 0}
+.payroll-metrics>div{padding:1rem;border-radius:15px;background:#f9eef7;border:1px solid #efdfeb}
+.payroll-metrics span{display:block;font-size:.68rem;color:var(--muted)}
+.payroll-metrics strong{display:block;font-size:1.15rem;color:var(--plum-dark);margin-top:.2rem}
+.payroll-table{min-width:760px}
+.payroll-table tfoot td{background:#faf2f8}
+.function-badge{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:#f3e5f1;color:var(--plum);font-size:.68rem;font-weight:800}
+.picker-item-function{align-items:center}
+.picker-worker-info{flex:1;min-width:0}
+.assignment-function{width:145px;min-height:38px;font-size:.72rem;padding:.45rem}
+@media (max-width:900px){.payroll-rules,.payroll-metrics{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:680px){
+  .payroll-rules,.payroll-metrics{grid-template-columns:1fr}
+  .payroll-filters{width:100%}
+  .payroll-filters select{flex:1}
+  .picker-item-function{align-items:flex-start;flex-wrap:wrap}
+  .assignment-function{width:100%;margin-left:1.5rem}
+}

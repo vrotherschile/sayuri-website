@@ -142,6 +142,7 @@
       userAgent: navigator.userAgent
     }),
     adminAttendance: () => request("adminAttendance", { token: getSession()?.token }),
+    payrollSummary: (startDate, endDate) => request("payrollSummary", { token: getSession()?.token, startDate, endDate }),
     ensureAuthenticated
   };
 

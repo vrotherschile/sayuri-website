@@ -99,7 +99,7 @@
         <div class="avatar">${esc((worker.name || worker.username || "?").charAt(0).toUpperCase())}</div>
         <div>
           <strong>${esc(fullName || worker.username)}</strong>
-          <small>${esc(worker.cargoDefault || "Sin cargo")} · ${esc(worker.username || "")}</small>
+          <small>${"Trabajadora activa"} · ${esc(worker.username || "")}</small>
         </div>
       `;
       box.appendChild(element);
@@ -177,21 +177,39 @@
     state.workers.forEach((worker) => {
       const existing = assignments.find((assignment) => assignment.workerId === worker.workerId);
       const label = document.createElement("label");
-      label.className = "picker-item";
+      label.className = "picker-item picker-item-function";
 
       label.innerHTML = `
         <input type="checkbox" value="${esc(worker.workerId)}" ${state.selectedWorkers.has(worker.workerId) ? "checked" : ""}>
-        <span>
+        <span class="picker-worker-info">
           <strong>${esc([worker.name, worker.lastName].filter(Boolean).join(" ") || worker.username)}</strong>
-          <small>${esc(worker.cargoDefault || "Sin cargo")}</small>
+          <small>Selecciona una función para este evento</small>
         </span>
+        <select class="assignment-function" data-worker-id="${esc(worker.workerId)}">
+          <option value="">Función…</option>
+          <option value="MASAJISTA" ${String(existing?.cargo || "").toUpperCase() === "MASAJISTA" ? "selected" : ""}>Masajista</option>
+          <option value="MANICURISTA" ${String(existing?.cargo || "").toUpperCase() === "MANICURISTA" ? "selected" : ""}>Manicurista</option>
+          <option value="TATUADOR(A)" ${String(existing?.cargo || "").toUpperCase() === "TATUADOR(A)" ? "selected" : ""}>Tatuador(a)</option>
+        </select>
       `;
 
-      label.querySelector("input").addEventListener("change", (event) => {
+      const checkbox = label.querySelector("input");
+      const select = label.querySelector("select");
+
+      checkbox.addEventListener("change", (event) => {
         if (event.target.checked) {
           state.selectedWorkers.add(worker.workerId);
         } else {
           state.selectedWorkers.delete(worker.workerId);
+          select.value = "";
+        }
+        $("#selected-count").textContent = state.selectedWorkers.size;
+      });
+
+      select.addEventListener("change", () => {
+        if (select.value) {
+          checkbox.checked = true;
+          state.selectedWorkers.add(worker.workerId);
         }
         $("#selected-count").textContent = state.selectedWorkers.size;
       });
@@ -220,7 +238,7 @@
       row.innerHTML = `
         <div>
           <strong>${esc(assignment.workerName || assignment.workerId)}</strong>
-          <small>${esc(assignment.cargo || "Cargo no definido")}</small>
+          <small>${esc(assignment.cargo || "Función no definida")}</small>
         </div>
         <button type="button" class="remove-assignment" data-id="${esc(assignment.assignmentId)}">Quitar</button>
       `;
@@ -325,31 +343,47 @@
           }
         }
 
-        const newWorkers = selectedIds
-          .filter((workerId) => !previousIds.includes(workerId))
-          .map((workerId) => ({ workerId, cargo: data.description }));
+        const assignmentPayload = selectedIds.map((workerId) => {
+          const select = document.querySelector(`.assignment-function[data-worker-id="${workerId}"]`);
+          return { workerId, cargo: select?.value || "" };
+        });
+
+        const missingFunction = assignmentPayload.some((item) => !item.cargo);
+        if (missingFunction) {
+          message.textContent = "Cada trabajadora seleccionada debe tener una función.";
+          return;
+        }
+
+        const newWorkers = assignmentPayload.filter((item) => !previousIds.includes(item.workerId));
 
         if (newWorkers.length) {
           await SayuriAPI.assignWorkers(savedShiftId, newWorkers);
         }
 
         for (const assignment of previousAssignments) {
-          if (state.selectedWorkers.has(assignment.workerId)) {
+          const current = assignmentPayload.find((item) => item.workerId === assignment.workerId);
+          if (current) {
             await SayuriAPI.updateAssignment(assignment.assignmentId, {
-              cargo: data.description
+              cargo: current.cargo
             });
           }
         }
       } else {
         const result = await SayuriAPI.createShift(data);
         savedShiftId = result.shift.shiftId;
-        await SayuriAPI.assignWorkers(
-          savedShiftId,
-          [...state.selectedWorkers].map((workerId) => ({
-            workerId,
-            cargo: data.description
-          }))
-        );
+
+        const assignmentPayload = [...state.selectedWorkers].map((workerId) => {
+          const select = document.querySelector(`.assignment-function[data-worker-id="${workerId}"]`);
+          return { workerId, cargo: select?.value || "" };
+        });
+
+        if (assignmentPayload.some((item) => !item.cargo)) {
+          message.textContent = "Cada trabajadora seleccionada debe tener una función.";
+          await SayuriAPI.deleteShift(savedShiftId);
+          return;
+        }
+
+        await SayuriAPI.assignWorkers(savedShiftId, assignmentPayload);
       }
 
       message.textContent = "Turno y equipo guardados correctamente.";

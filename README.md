@@ -99,3 +99,16 @@ La regla está implementada en el backend:
 - hora validada con el servidor.
 
 La interfaz puede deshabilitar el botón fuera de la ventana, pero la seguridad real se mantiene en Apps Script.
+
+
+## Modelo de pago RRHH
+
+Sayuri RRHH utiliza pago por evento, no pago por horas. La función se asigna individualmente en cada evento:
+- Masajista: $20.000 base.
+- Manicurista: $20.000 base.
+- Tatuador(a): $15.000 base.
+
+Los bonos son acumulativos y retroactivos:
+- Masajista: 10+ eventos = +$1.000/evento; 15+ eventos = +$2.000/evento.
+- Manicurista: 15+ eventos = +$1.000/evento.
+- Tatuador(a): sin bono.

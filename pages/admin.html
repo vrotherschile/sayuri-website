@@ -11,6 +11,7 @@
 <script src="../js/api.js" defer></script>
 <script src="../js/app.js" defer></script>
 <script src="../js/admin.js" defer></script>
+<script src="../js/payroll.js" defer></script>
 </head>
 <body class="rrhh-body">
 <header class="rrhh-top">
@@ -20,6 +21,7 @@
   </a>
   <nav class="portal-nav">
     <a class="active" href="admin.html">Planificación</a>
+    <a href="#pagos">Pagos RRHH</a>
     <a href="#asistencias">Asistencias</a>
     <a href="import-workers.html">Trabajadores</a>
     <button data-logout class="logout-btn">Salir</button>
@@ -31,7 +33,7 @@
   <div>
     <p class="eyebrow">Gestión RRHH</p>
     <h1>Planificación de equipos</h1>
-    <p>Organiza turnos, cargos y equipos de trabajo con anticipación.</p>
+    <p>Organiza eventos y asigna individualmente una función a cada trabajadora.</p>
   </div>
   <div class="admin-user">Sesión: <strong data-user-name></strong></div>
 </section>
@@ -79,6 +81,47 @@
   </div>
 </section>
 
+
+<section class="card payroll-card" id="pagos">
+  <div class="section-row">
+    <div>
+      <p class="eyebrow">Remuneraciones por evento</p>
+      <h2>Pagos a trabajadoras</h2>
+      <p>El pago se calcula por evento y función. Los bonos son retroactivos según los eventos acumulados.</p>
+    </div>
+    <div class="payroll-filters">
+      <label for="payroll-month">Mes</label>
+      <select id="payroll-month">
+        <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+        <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+        <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+        <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+      </select>
+      <label for="payroll-year">Año</label>
+      <select id="payroll-year"></select>
+      <button id="payroll-refresh" class="button button-secondary" type="button">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="payroll-rules">
+    <div><strong>Masajista</strong><span>$20.000 / evento</span></div>
+    <div><strong>Manicurista</strong><span>$20.000 / evento</span></div>
+    <div><strong>Tatuador(a)</strong><span>$15.000 / evento</span></div>
+  </div>
+
+  <div class="payroll-metrics">
+    <div><span>Trabajadoras</span><strong id="payroll-worker-count">0</strong></div>
+    <div><span>Eventos</span><strong id="payroll-event-count">0</strong></div>
+    <div><span>Bonos</span><strong id="payroll-bonus-total">$0</strong></div>
+    <div><span>Total a pagar</span><strong id="payroll-total">$0</strong></div>
+  </div>
+
+  <div id="payroll-table">
+    <div class="loading">Calculando remuneraciones…</div>
+  </div>
+  <p id="payroll-message" class="form-message"></p>
+</section>
+
 <section class="card attendance-admin-card" id="asistencias">
   <div class="section-row">
     <div>
@@ -123,8 +166,8 @@
         <input id="shift-end" type="time" required>
       </div>
       <div class="full-field">
-        <label for="shift-description">Cargo del turno</label>
-        <input id="shift-description" type="text" placeholder="Ej.: Masajista, coordinadora, apoyo" required>
+        <label for="shift-description">Descripción del evento (opcional)</label>
+        <input id="shift-description" type="text" placeholder="Ej.: Feria de Navidad, evento corporativo">
       </div>
     </div>
 

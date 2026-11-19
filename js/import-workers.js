@@ -11,8 +11,7 @@
       lastName: String(row.lastName || row.Apellido || "").trim(),
       rut: String(row.rut || row.RUT || "").trim(),
       email: String(row.email || row.Email || "").trim(),
-      phone: String(row.phone || row.Telefono || "").trim(),
-      cargo: String(row.cargo || row.Cargo || row.roleTitle || "").trim()
+      phone: String(row.phone || row.Telefono || "").trim()
     };
   }
 
@@ -25,7 +24,7 @@
       return;
     }
 
-    const columns = ["username", "name", "lastName", "rut", "cargo", "phone", "email", "password"];
+    const columns = ["username", "name", "lastName", "rut", "phone", "email", "password"];
 
     box.innerHTML = `
       <table>
