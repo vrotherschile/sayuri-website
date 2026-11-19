@@ -61,3 +61,23 @@
   .picker-item-function{align-items:flex-start;flex-wrap:wrap}
   .assignment-function{width:100%;margin-left:1.5rem}
 }
+
+/* Alta manual de trabajadores */
+.manual-worker-card {
+  margin-top: 1.5rem;
+}
+
+.manual-worker-card .form-grid {
+  margin-top: 1rem;
+}
+
+.manual-worker-card input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.payroll-payment-note {
+  margin-top: .5rem;
+  font-size: .9rem;
+  opacity: .85;
+}

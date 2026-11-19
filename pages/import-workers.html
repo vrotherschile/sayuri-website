@@ -11,7 +11,56 @@
 <header class="rrhh-top"><a class="brand" href="../index.html"><img src="../assets/logo-sayuri.png" alt="Estética Spa Sayuri"><span><strong>Estética Spa</strong><em>Sayuri</em></span></a>
 <nav class="portal-nav"><a href="admin.html">Planificación</a><a class="active" href="import-workers.html">Trabajadores</a><button data-logout class="logout-btn">Salir</button></nav></header>
 <main class="portal-main narrow">
-<section class="page-heading"><div><p class="eyebrow">Gestión de personal</p><h1>Trabajadores</h1><p>Importa nuevos usuarios mediante una plantilla Excel y sincronízalos con la API.</p></div></section>
+<section class="page-heading"><div><p class="eyebrow">Gestión de personal</p><h1>Trabajadores</h1><p>Añade trabajadores rápidamente de forma manual o incorpora varios mediante una plantilla Excel.</p></div></section>
+
+<section class="card manual-worker-card">
+  <div class="section-row">
+    <div>
+      <p class="eyebrow">Alta rápida</p>
+      <h2>Añadir trabajador manualmente</h2>
+      <p>Crea inmediatamente la trabajadora y su cuenta de acceso. El cargo general no se utiliza.</p>
+    </div>
+  </div>
+
+  <form id="manual-worker-form">
+    <div class="form-grid">
+      <div>
+        <label for="manual-username">Usuario *</label>
+        <input id="manual-username" name="username" type="text" autocomplete="username" required placeholder="ej. maria.soto">
+      </div>
+      <div>
+        <label for="manual-password">Contraseña inicial *</label>
+        <input id="manual-password" name="password" type="password" autocomplete="new-password" required placeholder="Contraseña temporal">
+      </div>
+      <div>
+        <label for="manual-name">Nombre *</label>
+        <input id="manual-name" name="name" type="text" required>
+      </div>
+      <div>
+        <label for="manual-lastname">Apellido</label>
+        <input id="manual-lastname" name="lastName" type="text">
+      </div>
+      <div>
+        <label for="manual-rut">RUT</label>
+        <input id="manual-rut" name="rut" type="text" placeholder="Opcional">
+      </div>
+      <div>
+        <label for="manual-phone">Teléfono</label>
+        <input id="manual-phone" name="phone" type="tel" placeholder="+569...">
+      </div>
+      <div class="full-field">
+        <label for="manual-email">Correo</label>
+        <input id="manual-email" name="email" type="email" placeholder="Opcional">
+      </div>
+    </div>
+
+    <div class="import-actions">
+      <button id="manual-worker-btn" class="button button-primary" type="submit">Crear trabajador</button>
+    </div>
+    <p id="manual-worker-message" class="form-message"></p>
+  </form>
+</section>
+
 <section class="card import-card">
 <div class="import-steps"><div><span>1</span><strong>Descarga la plantilla</strong><p>Completa una fila por trabajador.</p></div><div><span>2</span><strong>Selecciona el Excel</strong><p>Revisamos los datos antes de enviarlos.</p></div><div><span>3</span><strong>Importa</strong><p>La API crea o actualiza las cuentas.</p></div></div>
 <a class="button button-secondary" href="../templates/plantilla-trabajadores.xlsx" download>Descargar plantilla Excel</a>

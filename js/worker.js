@@ -5,13 +5,38 @@
   const $ = (selector) => document.querySelector(selector);
   const pad = (n) => String(n).padStart(2, "0");
 
+  function normalizeDateOnly(value) {
+    const raw = String(value || "").trim();
+
+    // ISO / YYYY-MM-DD / YYYY-MM-DDT...
+    const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+    if (iso) {
+      return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
+
+    // Evita mostrar fechas base de Excel/Sheets como 1899-12-30.
+    return "";
+  }
+
+  function normalizeTimeOnly(value) {
+    const raw = String(value || "").trim();
+
+    const match = raw.match(/(?:T|\\s)?(\\d{1,2}):(\\d{2})/);
+    if (!match) return "";
+
+    return `${String(match[1]).padStart(2, "0")}:${match[2]}`;
+  }
+
   function formatDate(dateString) {
-    const [year, month, day] = String(dateString).split("-").map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString("es-CL", {
-      weekday: "long",
-      day: "numeric",
-      month: "long"
-    });
+    const normalized = normalizeDateOnly(dateString);
+
+    if (!normalized) {
+      return "Fecha no disponible";
+    }
+
+    const [year, month, day] = normalized.split("-").map(Number);
+
+    return `${String(day).padStart(2, "0")}-${String(month).padStart(2, "0")}-${year}`;
   }
 
   function formatShiftType(type) {
@@ -28,8 +53,17 @@
   }
 
   function withinWindow(shift) {
+    if (!shift.date || !shift.startTime) {
+      return false;
+    }
+
     const now = new Date();
     const start = toDateTime(shift.date, shift.startTime);
+
+    if (Number.isNaN(start.getTime())) {
+      return false;
+    }
+
     const diff = (now.getTime() - start.getTime()) / 60000;
     const limit = Number(window.SAYURI_CONFIG.ATTENDANCE_WINDOW_MINUTES || 60);
 
@@ -120,6 +154,9 @@
 
       const signed = Boolean(shift.attendanceSigned);
 
+      const displayTime =
+        `${esc(shift.startTime || "--:--")}–${esc(shift.endTime || "--:--")}`;
+
       card.innerHTML = `
         <div class="schedule-date">
           <strong>${esc(formatDate(shift.date))}</strong>
@@ -127,8 +164,7 @@
         </div>
         <div>
           <h3>${esc(shift.cargo || "Función no definida")}</h3>
-          <p>${esc(shift.startTime)}–${esc(shift.endTime)}${shift.description ? ` · ${esc(shift.description)}` : ""}</p>
-          ${shift.notes ? `<small class="schedule-note">${esc(shift.notes)}</small>` : ""}
+          <p>${displayTime}</p>
         </div>
         <span class="schedule-status ${signed ? "signed" : ""}">
           ${signed ? "Asistencia firmada" : "Programado"}
@@ -144,6 +180,9 @@
       const result = await SayuriAPI.workerSchedule();
       schedule = (result.schedule || []).map((item) => ({
         ...item,
+        date: normalizeDateOnly(item.date),
+        startTime: normalizeTimeOnly(item.startTime),
+        endTime: normalizeTimeOnly(item.endTime),
         attendanceSigned: false
       }));
 

@@ -98,6 +98,48 @@
     }
   });
 
+
+  const manualForm = $("#manual-worker-form");
+
+  if (manualForm) {
+    manualForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const button = $("#manual-worker-btn");
+      const message = $("#manual-worker-message");
+
+      const data = {
+        username: $("#manual-username").value.trim(),
+        password: $("#manual-password").value,
+        name: $("#manual-name").value.trim(),
+        lastName: $("#manual-lastname").value.trim(),
+        rut: $("#manual-rut").value.trim(),
+        phone: $("#manual-phone").value.trim(),
+        email: $("#manual-email").value.trim()
+      };
+
+      if (!data.username || !data.password || !data.name) {
+        message.textContent = "Usuario, contraseña y nombre son obligatorios.";
+        return;
+      }
+
+      button.disabled = true;
+      message.textContent = "Creando trabajador y cuenta…";
+
+      try {
+        const result = await SayuriAPI.createWorker(data);
+
+        message.textContent =
+          `Trabajador ${result.worker?.name || data.name} creado correctamente. Usuario: ${result.user?.username || data.username}.`;
+
+        manualForm.reset();
+      } catch (error) {
+        message.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  }
+
   function esc(value) {
     return String(value ?? "").replace(/[&<>"']/g, (char) => ({
       "&": "&amp;",
