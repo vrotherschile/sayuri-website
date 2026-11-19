@@ -22,8 +22,10 @@
     const totals = result.totals || {};
     $("#payroll-worker-count").textContent = totals.workers ?? 0;
     $("#payroll-event-count").textContent = totals.events ?? 0;
+    $("#payroll-signature-count").textContent = totals.signatures ?? 0;
     $("#payroll-bonus-total").textContent = fmt(totals.bonusTotal);
     $("#payroll-total").textContent = fmt(totals.totalPay);
+    $("#payroll-effective-total").textContent = fmt(totals.effectivePayment);
 
     const box = $("#payroll-table");
     if (!rows.length) {
@@ -39,9 +41,11 @@
               <th>Trabajadora</th>
               <th>Función</th>
               <th>Eventos</th>
+              <th>Firmas</th>
               <th>Pago por evento</th>
               <th>Bono total</th>
               <th>Pago total</th>
+              <th>Pago efectivo</th>
             </tr>
           </thead>
           <tbody>
@@ -50,9 +54,11 @@
                 <td><strong>${esc(r.workerName)}</strong></td>
                 <td><span class="function-badge">${esc(r.funcion)}</span></td>
                 <td>${Number(r.eventCount || 0)}</td>
+                <td>${Number(r.signatureCount || 0)}</td>
                 <td>${fmt(r.payPerEvent)}</td>
                 <td>${fmt(r.bonusTotal)}</td>
                 <td><strong>${fmt(r.totalPay)}</strong></td>
+                <td><strong>${fmt(r.effectivePayment)}</strong></td>
               </tr>
             `).join("")}
           </tbody>
@@ -60,9 +66,11 @@
             <tr>
               <td colspan="2"><strong>Total</strong></td>
               <td><strong>${Number(totals.events || 0)}</strong></td>
+              <td><strong>${Number(totals.signatures || 0)}</strong></td>
               <td>—</td>
               <td><strong>${fmt(totals.bonusTotal)}</strong></td>
               <td><strong>${fmt(totals.totalPay)}</strong></td>
+              <td><strong>${fmt(totals.effectivePayment)}</strong></td>
             </tr>
           </tfoot>
         </table>
@@ -80,7 +88,7 @@
       const result = await SayuriAPI.payrollSummary(range.startDate, range.endDate);
       render(result);
       $("#payroll-message").textContent =
-        `Período: ${range.startDate} al ${range.endDate}. Los bonos se calculan de forma retroactiva según los eventos acumulados de cada función.`;
+        `Período: ${range.startDate} al ${range.endDate}. "Eventos" son asignaciones; "Firmas" son asistencias firmadas correctamente. El pago efectivo considera únicamente las firmas válidas. Los bonos mantienen el cálculo retroactivo según los eventos acumulados de cada función.`;
     } catch (error) {
       box.innerHTML = `<div class="empty-state">${esc(error.message)}</div>`;
       $("#payroll-message").textContent = "";
