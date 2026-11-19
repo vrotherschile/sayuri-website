@@ -20,9 +20,13 @@
   }
 
   function normalizeShift(shift) {
+    const rawDate = shift.date || shift.scheduledDate || "";
+    const normalizedDate = String(rawDate).substring(0, 10);
+
     return {
       ...shift,
       shiftId: shift.shiftId || shift.id,
+      date: normalizedDate,
       shiftType: String(shift.shiftType || shift.type || "SINGLE").toUpperCase(),
       startTime: shift.startTime || shift.start || "",
       endTime: shift.endTime || shift.end || "",
@@ -325,6 +329,19 @@
       return;
     }
 
+    // Validar primero la configuración completa del equipo.
+    // Así no se modifica el evento actual si falta una función.
+    const selectedIds = [...state.selectedWorkers];
+    const assignmentPayload = selectedIds.map((workerId) => {
+      const select = document.querySelector(`.assignment-function[data-worker-id="${workerId}"]`);
+      return { workerId, cargo: select?.value || "" };
+    });
+
+    if (assignmentPayload.some((item) => !item.cargo)) {
+      message.textContent = "Cada trabajadora seleccionada debe tener una función.";
+      return;
+    }
+
     try {
       let savedShiftId = shiftId;
 
@@ -334,24 +351,12 @@
         const current = state.shifts.find((shift) => shift.shiftId === shiftId);
         const previousAssignments = current?.assignments || [];
 
-        const selectedIds = [...state.selectedWorkers];
         const previousIds = previousAssignments.map((assignment) => assignment.workerId);
 
         for (const assignment of previousAssignments) {
           if (!state.selectedWorkers.has(assignment.workerId)) {
             await SayuriAPI.removeAssignment(assignment.assignmentId);
           }
-        }
-
-        const assignmentPayload = selectedIds.map((workerId) => {
-          const select = document.querySelector(`.assignment-function[data-worker-id="${workerId}"]`);
-          return { workerId, cargo: select?.value || "" };
-        });
-
-        const missingFunction = assignmentPayload.some((item) => !item.cargo);
-        if (missingFunction) {
-          message.textContent = "Cada trabajadora seleccionada debe tener una función.";
-          return;
         }
 
         const newWorkers = assignmentPayload.filter((item) => !previousIds.includes(item.workerId));
@@ -371,17 +376,6 @@
       } else {
         const result = await SayuriAPI.createShift(data);
         savedShiftId = result.shift.shiftId;
-
-        const assignmentPayload = [...state.selectedWorkers].map((workerId) => {
-          const select = document.querySelector(`.assignment-function[data-worker-id="${workerId}"]`);
-          return { workerId, cargo: select?.value || "" };
-        });
-
-        if (assignmentPayload.some((item) => !item.cargo)) {
-          message.textContent = "Cada trabajadora seleccionada debe tener una función.";
-          await SayuriAPI.deleteShift(savedShiftId);
-          return;
-        }
 
         await SayuriAPI.assignWorkers(savedShiftId, assignmentPayload);
       }
