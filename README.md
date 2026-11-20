@@ -52,7 +52,8 @@ window.SAYURI_CONFIG = {
   API_BASE_URL: "https://script.google.com/macros/s/TU_ID/exec",
   API_MODE: "api",
   DEFAULT_YEAR: new Date().getFullYear(),
-  ATTENDANCE_WINDOW_MINUTES: 60
+  ATTENDANCE_BEFORE_MINUTES: 120
+ATTENDANCE_AFTER_MINUTES: 120
 };
 ```
 
