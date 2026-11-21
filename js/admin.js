@@ -80,6 +80,7 @@
       renderWorkers();
       renderCalendar();
       renderAttendance();
+      renderPendingAttendance();
     } catch (error) {
       $("#calendar").innerHTML =
         `<div class="empty-state">No se pudo cargar la información: ${esc(error.message)}</div>`;
@@ -410,6 +411,101 @@
     }
   }
 
+  async function renderPendingAttendance() {
+    const box = $("#pending-attendance-table");
+    if (!box) return;
+
+    try {
+      const result = await SayuriAPI.adminPendingAttendance();
+      const records = result.pending || [];
+
+      if (!records.length) {
+        box.innerHTML = '<div class="empty-state">No hay firmas pendientes de validación.</div>';
+        return;
+      }
+
+      const rows = records.map((record) => `
+        <tr>
+          <td><strong>${esc(record.workerName || "—")}</strong></td>
+          <td>${esc(record.date || "—")}</td>
+          <td>${esc(formatType(record.shiftType))}</td>
+          <td>${esc(record.startTime || "—")}–${esc(record.endTime || "—")}</td>
+          <td>${esc(record.cargo || "—")}</td>
+          <td>
+            <div class="pending-actions">
+              <button class="button button-primary button-small" type="button" data-validate-attendance="${esc(record.assignmentId)}">Validar</button>
+              <button class="button button-danger button-small" type="button" data-reject-attendance="${esc(record.assignmentId)}">Rechazar</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      box.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Fecha</th>
+                <th>Turno</th>
+                <th>Horario</th>
+                <th>Función</th>
+                <th>Acción administrativa</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+
+      box.querySelectorAll("[data-validate-attendance]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const assignmentId = button.dataset.validateAttendance;
+          const reason = prompt("Motivo de la validación administrativa:", "El trabajador asistió, pero no pudo registrar su firma dentro del período permitido.");
+          if (reason === null) return;
+          if (!reason.trim()) {
+            alert("Debes indicar un motivo.");
+            return;
+          }
+
+          button.disabled = true;
+          try {
+            await SayuriAPI.adminValidateAttendance(assignmentId, reason.trim());
+            await Promise.all([renderPendingAttendance(), renderAttendance()]);
+          } catch (error) {
+            alert(error.message);
+            button.disabled = false;
+          }
+        });
+      });
+
+      box.querySelectorAll("[data-reject-attendance]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const assignmentId = button.dataset.rejectAttendance;
+          const reason = prompt("Motivo del rechazo:", "No se pudo comprobar la asistencia.");
+          if (reason === null) return;
+          if (!reason.trim()) {
+            alert("Debes indicar un motivo.");
+            return;
+          }
+
+          if (!confirm("¿Rechazar esta asistencia? Esta acción impedirá que genere pago efectivo.")) return;
+
+          button.disabled = true;
+          try {
+            await SayuriAPI.adminRejectAttendance(assignmentId, reason.trim());
+            await Promise.all([renderPendingAttendance(), renderAttendance()]);
+          } catch (error) {
+            alert(error.message);
+            button.disabled = false;
+          }
+        });
+      });
+    } catch (error) {
+      box.innerHTML = `<div class="empty-state">${esc(error.message)}</div>`;
+    }
+  }
+
   async function renderAttendance() {
     const box = $("#attendance-table");
     if (!box) return;
@@ -440,8 +536,8 @@
               <td>${esc(formatType(record.shiftType))}</td>
               <td>${esc(record.startTime || "—")}–${esc(record.endTime || "—")}</td>
               <td>${esc(record.cargo || "—")}</td>
-              <td><strong class="attendance-signed">Firmado</strong></td>
-              <td>${esc(signedAt)}</td>
+              <td><strong class="attendance-status ${String(record.status || "").toUpperCase() === "ADMIN_VALIDATED" ? "admin-validated" : String(record.status || "").toUpperCase() === "REJECTED" ? "rejected" : "attendance-signed"}">${esc(formatAttendanceStatus(record.status))}</strong></td>
+              <td>${esc(signedAt || record.validatedAt ? new Date(record.signedAt || record.validatedAt).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "—")}</td>
             </tr>
           `;
         })
@@ -468,6 +564,14 @@
     } catch (error) {
       box.innerHTML = `<div class="empty-state">${esc(error.message)}</div>`;
     }
+  }
+
+  function formatAttendanceStatus(status) {
+    const value = String(status || "").toUpperCase();
+    if (value === "ADMIN_VALIDATED") return "Validada por admin";
+    if (value === "REJECTED") return "Rechazada";
+    if (value === "SIGNED") return "Firmado";
+    return value || "—";
   }
 
   function esc(value) {
@@ -497,5 +601,6 @@
     $("#shift-form").addEventListener("submit", save);
     $("#delete-shift").addEventListener("click", deleteCurrentShift);
     $("#refresh-attendance").addEventListener("click", renderAttendance);
+    $("#refresh-pending-attendance").addEventListener("click", renderPendingAttendance);
   });
 })();

@@ -142,6 +142,9 @@
       userAgent: navigator.userAgent
     }),
     adminAttendance: () => request("adminAttendance", { token: getSession()?.token }),
+    adminPendingAttendance: () => request("adminPendingAttendance", { token: getSession()?.token }),
+    adminValidateAttendance: (assignmentId, validationReason) => request("adminValidateAttendance", { token: getSession()?.token, assignmentId, validationReason }),
+    adminRejectAttendance: (assignmentId, validationReason) => request("adminRejectAttendance", { token: getSession()?.token, assignmentId, validationReason }),
     payrollSummary: (startDate, endDate) => request("payrollSummary", { token: getSession()?.token, startDate, endDate }),
     ensureAuthenticated
   };

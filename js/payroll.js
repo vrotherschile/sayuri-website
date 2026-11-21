@@ -88,7 +88,7 @@
       const result = await SayuriAPI.payrollSummary(range.startDate, range.endDate);
       render(result);
       $("#payroll-message").textContent =
-        `Período: ${range.startDate} al ${range.endDate}. "Eventos" son asignaciones; "Firmas" son asistencias firmadas correctamente. El pago efectivo considera únicamente las firmas válidas. Los bonos mantienen el cálculo retroactivo según los eventos acumulados de cada función.`;
+        `Período: ${range.startDate} al ${range.endDate}. "Eventos" son asignaciones; "Firmas" son asistencias válidas, ya sean firmadas por la trabajadora o validadas administrativamente. El pago efectivo considera únicamente las asistencias válidas. Los bonos mantienen el cálculo retroactivo según los eventos acumulados de cada función.`;
     } catch (error) {
       box.innerHTML = `<div class="empty-state">${esc(error.message)}</div>`;
       $("#payroll-message").textContent = "";
